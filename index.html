@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bingo Verbena & Charanga 1–90 (AutoPlay)</title>
+<style>
+:root{--bg:#0f172a;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
+.wrap{max-width:1100px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1.2fr 1fr;gap:20px}
+header{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px}
+.big-number{font-size:clamp(64px,12vw,140px);font-weight:800;text-align:center;margin:0;line-height:.9;background:linear-gradient(#fff,#cbd5e1);-webkit-background-clip:text;color:transparent}
+.song{text-align:center;font-size:clamp(18px,2vw,26px)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:8px}
+button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;padding:10px 14px;border-radius:12px;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-top:10px}
+.ball{aspect-ratio:1/1;display:grid;place-items:center;border-radius:10px;font-weight:700;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.ball.drawn{background:linear-gradient(145deg,rgba(34,211,238,.25),rgba(34,211,238,.05));border-color:rgba(34,211,238,.6)}
+.history{display:flex;flex-wrap:wrap;gap:8px;min-height:38px}
+.chip{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:13px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.muted{color:var(--muted)}input[type="range"]{width:160px}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}}
+</style></head>
+<body>
+<div class="wrap">
+<header><h2 style="margin:0">🎺 Bingo Verbena & Charanga 1–90</h2><div class="muted" id="remaining"></div></header>
+<section class="panel">
+  <h1 class="big-number" id="bigNumber">—</h1>
+  <div class="song" id="songText">Pulsa “Sacar número” para empezar</div>
+  <div class="controls">
+    <button id="drawBtn">🎱 Sacar número</button>
+    <button id="undoBtn" disabled>↩️ Deshacer</button>
+    <button id="resetBtn">🗑️ Reiniciar</button>
+    <button id="spotifyBtn" disabled>▶️ Abrir en Spotify</button>
+  </div>
+  <div class="row" style="justify-content:center;margin-top:8px">
+    <label><input type="checkbox" id="autoplay" checked> Reproducir automáticamente</label>
+    <label class="row">Volumen <input type="range" id="vol" min="0" max="1" step="0.01" value="0.8"></label>
+    <button id="muteBtn">🔇 Silencio</button>
+  </div>
+  <div style="margin-top:10px">
+    <div class="muted">Últimos 10 números:</div>
+    <div class="history" id="lastTen"></div>
+  </div>
+  <audio id="player" preload="auto"></audio>
+  <div class="muted" style="margin-top:6px">Pon tus MP3 en <code>audio/</code> como <code>1.mp3</code>…<code>90.mp3</code>.</div>
+</section>
+<section class="panel">
+  <div class="muted" style="margin-bottom:8px;">Panel de números</div>
+  <div class="grid" id="grid"></div>
+</section>
+</div>
+<script>
+const mapping = [{"number": 1, "title": "Que viva España", "artist": "Manolo Escobar"}, {"number": 2, "title": "Paquito el chocolatero", "artist": "Pasodoble / Charanga"}, {"number": 3, "title": "El toro guapo", "artist": "El Fary"}, {"number": 4, "title": "La morocha", "artist": "Orquesta / Charanga"}, {"number": 5, "title": "El bimbó", "artist": "Georgie Dann"}, {"number": 6, "title": "La barbacoa", "artist": "Georgie Dann"}, {"number": 7, "title": "Carnaval, carnaval", "artist": "Georgie Dann"}, {"number": 8, "title": "El chiringuito", "artist": "Georgie Dann"}, {"number": 9, "title": "Macarena", "artist": "Los del Río"}, {"number": 10, "title": "La colegiala", "artist": "Gary Low / Orquesta"}, {"number": 11, "title": "La cumparsita", "artist": "Pasodoble"}, {"number": 12, "title": "Islas Canarias", "artist": "Pasodoble"}, {"number": 13, "title": "Amparito Roca", "artist": "Pasodoble"}, {"number": 14, "title": "Manolete", "artist": "Pasodoble"}, {"number": 15, "title": "Y viva España (versión orquesta)", "artist": "Orquesta Verbena"}, {"number": 16, "title": "Sarandonga", "artist": "Lolita"}, {"number": 17, "title": "La medusa", "artist": "Grupo Verbena"}, {"number": 18, "title": "El tractor amarillo", "artist": "Zapato Veloz"}, {"number": 19, "title": "Aserejé", "artist": "Las Ketchup"}, {"number": 20, "title": "Mayonesa", "artist": "Chocolate Latino"}, {"number": 21, "title": "Meneito", "artist": "Orquesta Verbena"}, {"number": 22, "title": "Vino griego", "artist": "José Vélez"}, {"number": 23, "title": "Sevilla tiene un color especial", "artist": "Los del Río"}, {"number": 24, "title": "María Isabel", "artist": "Los Payos"}, {"number": 25, "title": "Eva María", "artist": "Fórmula V"}, {"number": 26, "title": "Cuéntame", "artist": "Fórmula V"}, {"number": 27, "title": "Tengo tu amor", "artist": "Fórmula V"}, {"number": 28, "title": "Fiesta", "artist": "Raffaella Carrà"}, {"number": 29, "title": "En el mundo entero", "artist": "Raffaella Carrà"}, {"number": 30, "title": "Hay que venir al sur", "artist": "Raffaella Carrà"}, {"number": 31, "title": "La vaca lechera", "artist": "Popular"}, {"number": 32, "title": "Cielito lindo", "artist": "Popular"}, {"number": 33, "title": "La cucaracha", "artist": "Popular"}, {"number": 34, "title": "Viento", "artist": "Jarcha"}, {"number": 35, "title": "Un beso y una flor", "artist": "Nino Bravo"}, {"number": 36, "title": "Libre", "artist": "Nino Bravo"}, {"number": 37, "title": "Valencia", "artist": "Pasodoble"}, {"number": 38, "title": "El porompompero", "artist": "Manolo Escobar"}, {"number": 39, "title": "Mi carro", "artist": "Manolo Escobar"}, {"number": 40, "title": "Me voy al pueblo", "artist": "Manolo Escobar"}, {"number": 41, "title": "Las chicas son guerreras", "artist": "Coz"}, {"number": 42, "title": "El baile del pañuelo", "artist": "Charanga"}, {"number": 43, "title": "Follow the Leader", "artist": "Soca Boys"}, {"number": 44, "title": "La vida es un carnaval", "artist": "Celia Cruz"}, {"number": 45, "title": "Suavemente", "artist": "Elvis Crespo"}, {"number": 46, "title": "Colgando en tus manos", "artist": "Carlos Baute & Marta Sánchez"}, {"number": 47, "title": "Y viva España (versión charanga)", "artist": "Charanga"}, {"number": 48, "title": "Chiquitita", "artist": "ABBA (versión orquesta)"}, {"number": 49, "title": "Corazón latino", "artist": "David Bisbal"}, {"number": 50, "title": "Bulería", "artist": "David Bisbal"}, {"number": 51, "title": "Ave María", "artist": "David Bisbal"}, {"number": 52, "title": "Que el ritmo no pare", "artist": "Patricia Manterola"}, {"number": 53, "title": "La ventanita", "artist": "Sergio Vargas"}, {"number": 54, "title": "Tequila", "artist": "Los Bravos"}, {"number": 55, "title": "Dónde está el amor", "artist": "Pablo Alborán & Jesse & Joy"}, {"number": 56, "title": "Mediterráneo", "artist": "Joan Manuel Serrat"}, {"number": 57, "title": "Fiesta", "artist": "Joan Manuel Serrat"}, {"number": 58, "title": "Volare", "artist": "Gipsy Kings"}, {"number": 59, "title": "Bamboleo", "artist": "Gipsy Kings"}, {"number": 60, "title": "Djobi Djoba", "artist": "Gipsy Kings"}, {"number": 61, "title": "Vamos a la playa", "artist": "Righeira"}, {"number": 62, "title": "Bailar pegados", "artist": "Sergio Dalma"}, {"number": 63, "title": "Galilea", "artist": "Sergio Dalma"}, {"number": 64, "title": "Yo quiero bailar", "artist": "Sonia & Selena"}, {"number": 65, "title": "Fiesta pagana", "artist": "Mägo de Oz"}, {"number": 66, "title": "Resistiré", "artist": "Dúo Dinámico"}, {"number": 67, "title": "Quisiera ser", "artist": "Alejandro Sanz"}, {"number": 68, "title": "Pisando fuerte", "artist": "Alejandro Sanz"}, {"number": 69, "title": "Corazón partío", "artist": "Alejandro Sanz"}, {"number": 70, "title": "Un rayo de sol", "artist": "Los Diablos"}, {"number": 71, "title": "El talismán", "artist": "Rosana"}, {"number": 72, "title": "Como una ola", "artist": "Rocío Jurado"}, {"number": 73, "title": "Se nos rompió el amor", "artist": "Rocío Jurado"}, {"number": 74, "title": "A mi manera", "artist": "Versión orquesta"}, {"number": 75, "title": "Soy minero", "artist": "Antonio Molina"}, {"number": 76, "title": "La campanera", "artist": "Joselito"}, {"number": 77, "title": "Y sin embargo te quiero", "artist": "Concha Piquer"}, {"number": 78, "title": "Ojos verdes", "artist": "Concha Piquer"}, {"number": 79, "title": "No me llames Dolores", "artist": "Lola Flores"}, {"number": 80, "title": "La zarzamora", "artist": "Lola Flores"}, {"number": 81, "title": "Bésame mucho", "artist": "Popular"}, {"number": 82, "title": "Granada", "artist": "Popular"}, {"number": 83, "title": "Malagueña", "artist": "Popular"}, {"number": 84, "title": "Cuando calienta el sol", "artist": "Luis Miguel"}, {"number": 85, "title": "La bamba", "artist": "Ritchie Valens"}, {"number": 86, "title": "Guantanamera", "artist": "Popular"}, {"number": 87, "title": "Amor de hombre", "artist": "Mocedades"}, {"number": 88, "title": "Eres tú", "artist": "Mocedades"}, {"number": 89, "title": "Vino tinto", "artist": "Estopa"}, {"number": 90, "title": "Partiré", "artist": "Andrea Bocelli"}];
+const state={pool:Array.from({length:90},(_,i)=>i+1),history:[],lastDraw:null,muted:false};
+const bigNumber=document.getElementById('bigNumber');
+const songText=document.getElementById('songText');
+const lastTen=document.getElementById('lastTen');
+const grid=document.getElementById('grid');
+const remaining=document.getElementById('remaining');
+const drawBtn=document.getElementById('drawBtn');
+const undoBtn=document.getElementById('undoBtn');
+const resetBtn=document.getElementById('resetBtn');
+const spotifyBtn=document.getElementById('spotifyBtn');
+const autoplay=document.getElementById('autoplay');
+const vol=document.getElementById('vol');
+const muteBtn=document.getElementById('muteBtn');
+const player=document.getElementById('player');
+function renderGrid(){grid.innerHTML='';for(let i=1;i<=90;i++){const el=document.createElement('div');el.className='ball'+(state.history.includes(i)?' drawn':'');el.textContent=i;grid.appendChild(el);}}
+function updateRemaining(){remaining.textContent=`Quedan ${90-state.history.length} números`;}
+function songFor(n){const it=mapping.find(x=>x.number===n);return it?it:{number:n,title:'—',artist:''};}
+function setAudioFor(n){player.src=`audio/${n}.mp3`;player.volume=parseFloat(vol.value);}
+function tryPlay(){if(state.muted)return;player.currentTime=0;player.play().catch(()=>{});}
+function draw(){if(state.pool.length===0)return;const idx=Math.floor(Math.random()*state.pool.length);const n=state.pool.splice(idx,1)[0];state.history.push(n);state.lastDraw=n;const s=songFor(n);bigNumber.textContent=n;songText.innerHTML=`${s.title} <small style="color:#94a3b8">— ${s.artist}</small>`;spotifyBtn.disabled=false;undoBtn.disabled=false;renderGrid();renderLastTen();updateRemaining();setAudioFor(n);if(autoplay.checked)tryPlay();}
+function renderLastTen(){const last=state.history.slice(-10).reverse();lastTen.innerHTML='';for(const n of last){const s=songFor(n);const chip=document.createElement('div');chip.className='chip';chip.textContent=`#${n} · ${s.title}`;lastTen.appendChild(chip);}}
+function undo(){if(state.history.length===0)return;const n=state.history.pop();state.pool.push(n);state.lastDraw=state.history[state.history.length-1]||null;const s=state.lastDraw?songFor(state.lastDraw):null;bigNumber.textContent=state.lastDraw?state.lastDraw:'—';songText.innerHTML=s?`${s.title} <small style="color:#94a3b8">— ${s.artist}</small>`:'Pulsa “Sacar número” para empezar';spotifyBtn.disabled=!state.lastDraw;undoBtn.disabled=state.history.length===0;renderGrid();renderLastTen();updateRemaining();if(state.lastDraw)setAudioFor(state.lastDraw);}
+function resetAll(){state.pool=Array.from({length:90},(_,i)=>i+1);state.history=[];state.lastDraw=null;bigNumber.textContent='—';songText.textContent='Pulsa “Sacar número” para empezar';spotifyBtn.disabled=true;undoBtn.disabled=true;renderGrid();renderLastTen();updateRemaining();player.pause();player.currentTime=0;player.removeAttribute('src');}
+function openSpotify(){if(!state.lastDraw)return;const s=songFor(state.lastDraw);const q=encodeURIComponent(`${s.title} ${s.artist}`);const appUrl=`spotify:search:${q}`;const webUrl=`https://open.spotify.com/search/${q}`;let timer;const openWeb=()=>{try{window.open(webUrl,'_blank','noopener')}catch(e){location.href=webUrl}};try{if(/Android/i.test(navigator.userAgent)){timer=setTimeout(openWeb,1200);location.href=appUrl}else if(/iPad|iPhone|iPod/i.test(navigator.userAgent)){timer=setTimeout(openWeb,1200);location.href=appUrl}else{timer=setTimeout(openWeb,1200);const iframe=document.createElement('iframe');iframe.style.display='none';iframe.src=appUrl;document.body.appendChild(iframe);}}catch(e){openWeb()}finally{window.addEventListener('pagehide',()=>clearTimeout(timer),{once:true});}}
+drawBtn.addEventListener('click',draw);undoBtn.addEventListener('click',undo);resetBtn.addEventListener('click',resetAll);spotifyBtn.addEventListener('click',openSpotify);muteBtn.addEventListener('click',()=>{state.muted=!state.muted;player.muted=state.muted;muteBtn.textContent=state.muted?'🔊 Sonar':'🔇 Silencio';});vol.addEventListener('input',()=>player.volume=parseFloat(vol.value));
+renderGrid();renderLastTen();updateRemaining();
+</script>
+</body></html>
